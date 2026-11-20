@@ -44,7 +44,6 @@
   <!-- THANH TIÊU ĐỀ TRÊN CÙNG -->
   <header class="bg-white border-b border-slate-200 px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2 z-30 shrink-0 shadow-xs">
     <div class="flex items-center gap-2.5 min-w-0">
-      <!-- Bấm 5 lần vào logo trái tim để mở khóa Quản trị viên -->
       <button id="secretAdminLogoBtn" onclick="handleSecretAdminTap()" title="Bản đồ Dịch tễ Việt Nam"
         class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-rose-600 to-red-700 text-white flex items-center justify-center shadow-sm shrink-0 active:scale-95 transition cursor-pointer">
         <i class="ph-fill ph-heartbeat text-xl sm:text-2xl"></i>
@@ -60,7 +59,6 @@
       </div>
     </div>
 
-    <!-- CÁC NÚT CÔNG CỤ BÊN PHẢI -->
     <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
       <button onclick="openTable1Modal()"
         class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition cursor-pointer">
@@ -194,7 +192,6 @@
         </div>
       </div>
 
-      <!-- Thẻ vị trí GPS -->
       <div id="userLocationCard" class="hidden absolute bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:w-80 z-20 bg-white rounded-2xl shadow-xl border border-slate-200 p-3.5">
         <div class="flex items-start justify-between gap-2">
           <div class="flex items-center gap-2">
@@ -214,7 +211,6 @@
         </div>
       </div>
 
-      <!-- Bảng tìm đường -->
       <div id="directionsPanel" class="hidden absolute top-3 left-3 right-14 sm:right-auto sm:w-88 z-20 bg-white rounded-2xl shadow-xl border border-slate-200 p-3.5">
         <div class="flex items-center justify-between mb-2.5">
           <h3 class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
@@ -399,7 +395,7 @@
       </div>
 
       <div class="space-y-2.5 text-xs">
-        <div class="font-extrabold text-slate-800">1. Phân cấp 3 màu cảnh báo (Dữ liệu trong 30 ngày gần nhất):</div>
+        <div class="font-extrabold text-slate-800">1. Phân cấp 3 màu cảnh báo (Dữ liệu 30 ngày, mỗi bệnh lấy bản tin mới nhất):</div>
         <div class="grid grid-cols-3 gap-2">
           <div class="p-2.5 rounded-xl bg-red-50 border border-red-200">
             <div class="font-extrabold text-red-700">Cấp 3 (Đỏ)</div>
@@ -425,7 +421,7 @@
 
       <div id="adminSheetConfigSection" class="hidden space-y-2.5 pt-2 border-t border-slate-200 text-xs">
         <div class="font-extrabold text-violet-900">3. Kết nối Google Sheets CSV (Cập nhật 05:00 & 17:00):</div>
-        <input id="googleSheetCsvInput" type="url" placeholder="Dán link Google Sheets đã xuất bản dạng .csv vào đây..."
+        <input id="googleSheetCsvInput" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX-1vTa31jMDqm_3pO9OVZ_je9zzVrCw2fBk7PSugLcz_lJnHfkIukcy4UuPaQ_JTp2OI36p1C0RXONShQP/pub?gid=0&single=true&output=csv"
           class="w-full px-3 py-2 border border-slate-300 rounded-xl" />
         <div class="flex flex-wrap gap-2">
           <button onclick="saveAndSyncGoogleSheet()" class="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold cursor-pointer">
@@ -448,12 +444,12 @@
     // =========================================================================
     // CẤU HÌNH QUẢN TRỊ & ĐƯỜNG LINK GOOGLE SHEETS CÔNG KHAI
     // =========================================================================
-    const PUBLIC_GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTa31jMDqm_3pO9OVZ_je9zzVrCw2fBk7PSugLcz_lJnHfkIukcy4UuPaQ_JTp2OI36p1C0RXONShQP/pub?gid=0&single=true&output=csv";
-    const ADMIN_SECRET_PASSCODE = "30902002a@A";
+    const PUBLIC_GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTa31jMDqm_3pO9OVZ_je9zzVrCw2fBk7PSugLcz_lJnHfkIukcy4UuPaQ_JTp2OI36p1C0RXONShQP/pub?gid=0&single=true&output=csv"; // 
+    const ADMIN_SECRET_PASSCODE = "admin2026";
 
-    const STORAGE_KEY_OUTBREAKS = "vn_epimap_outbreaks_v3";
-    const STORAGE_KEY_SHEET_URL = "vn_epimap_sheet_csv_url_v3";
-    const STORAGE_KEY_ADMIN_AUTH = "vn_epimap_admin_unlocked_v3";
+    const STORAGE_KEY_OUTBREAKS = "vn_epimap_outbreaks_v4";
+    const STORAGE_KEY_SHEET_URL = "vn_epimap_sheet_csv_url_v4";
+    const STORAGE_KEY_ADMIN_AUTH = "vn_epimap_admin_unlocked_v4";
 
     const PROVINCES_34 = [
       { id: "HN", name: "TP. Hà Nội", lat: 21.0285, lng: 105.8542, region: "Bắc Bộ" },
@@ -505,8 +501,7 @@
       ],
       "Sởi": [
         "Đưa trẻ đi tiêm vắc xin phòng bệnh Sởi đầy đủ và đúng lịch theo chương trình Tiêm chủng mở rộng.",
-        "Hạn chế tiếp xúc gần với người có triệu chứng sốt, phát ban, ho, chảy nước mũi.",
-        "Tăng cường dinh dưỡng, giữ vệ sinh mũi họng và thông thoáng nhà cửa."
+        "Hạn chế tiếp xúc gần với người có triệu chứng sốt, phát ban, ho, chảy nước mũi."
       ],
       "Bạch hầu": [
         "Tiêm vắc xin phòng Bạch hầu đầy đủ (mũi cơ bản và mũi nhắc lại).",
@@ -525,11 +520,10 @@
     const DAY_MS = 24 * 60 * 60 * 1000;
     const NOW_TS = Date.now();
 
-    // Dữ liệu mẫu chỉ phản ánh số ca phát sinh gần đây trong tháng
     const DEFAULT_OUTBREAKS = [
       { id: "ob1", provinceId: "HN", disease: "Sốt xuất huyết", cases: 316, level: 2, trend: "Nguồn CDC địa phương", sourceName: "CDC TP. Hà Nội", articleTitle: "Hà Nội ghi nhận 316 ca mắc sốt xuất huyết trong tuần, tập trung xử lý ổ dịch", articleUrl: "https://soyte.hanoi.gov.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 1 * DAY_MS },
       { id: "ob2", provinceId: "HCM", disease: "Tay chân miệng", cases: 240, level: 2, trend: "Cập nhật trong tuần", sourceName: "HCDC TP. Hồ Chí Minh", articleTitle: "TP.HCM giám sát chặt các ca mắc tay chân miệng mới tại trường mầm non", articleUrl: "https://hcdc.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 2 * DAY_MS },
-      { id: "ob3", provinceId: "NB", disease: "Sốt xuất huyết", cases: 85, level: 2, trend: "Nguồn CDC địa phương", sourceName: "CDC Ninh Bình / Cổng TTĐT Y tế", articleTitle: "Ninh Bình tăng cường giám sát dịch tễ, xử lý triệt để ổ dịch sốt xuất huyết mới", articleUrl: "https://soyte.ninhbinh.gov.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 2 * DAY_MS },
+      { id: "ob3", provinceId: "NB", disease: "Sốt xuất huyết", cases: 85, level: 2, trend: "Nguồn CDC địa phương", sourceName: "CDC Ninh Bình", articleTitle: "Ninh Bình tăng cường giám sát dịch tễ, xử lý triệt để ổ dịch sốt xuất huyết mới", articleUrl: "https://soyte.ninhbinh.gov.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 2 * DAY_MS },
       { id: "ob4", provinceId: "DN", disease: "Sốt xuất huyết", cases: 190, level: 2, trend: "Nguồn CDC địa phương", sourceName: "CDC TP. Đà Nẵng", articleTitle: "Đà Nẵng kiểm soát chặt chẽ các ổ dịch sốt xuất huyết phát sinh trong tháng", articleUrl: "https://soyte.danang.gov.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 1 * DAY_MS },
       { id: "ob5", provinceId: "DL", disease: "Sốt xuất huyết", cases: 520, level: 3, trend: "Cao điểm trong tháng", sourceName: "Báo Tuổi Trẻ Sức khỏe", articleTitle: "Đắk Lắk ghi nhận thêm 520 ca sốt xuất huyết mới trong tháng qua", articleUrl: "https://tuoitre.vn/suc-khoe.htm", updatedAt: "Hôm nay", timestamp: NOW_TS - 3 * DAY_MS },
       { id: "ob6", provinceId: "TH", disease: "Sốt xuất huyết", cases: 65, level: 2, trend: "Đã qua 15 ngày không ca mới", sourceName: "CDC Thanh Hóa", articleTitle: "Đánh giá tình hình dịch sốt xuất huyết trên địa bàn tỉnh Thanh Hóa", articleUrl: "https://syt.thanhhoa.gov.vn", updatedAt: "15 ngày trước", timestamp: NOW_TS - 15 * DAY_MS },
@@ -546,9 +540,6 @@
     let adminTapCount = 0;
     let adminTapTimer = null;
 
-    // =========================================================================
-    // CHUẨN HÓA LINK BÀI BÁO (MỞ THẲNG BÀI VIẾT THAY VÌ DỪNG Ở TRANG CHỦ)
-    // =========================================================================
     function buildSmartArticleUrl(item, provinceName) {
       const rawUrl = (item && item.articleUrl ? String(item.articleUrl) : "").trim();
       const title = (item && item.articleTitle ? String(item.articleTitle) : "").trim();
@@ -580,23 +571,12 @@
       return `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
     }
 
-    // =========================================================================
-    // QUY TẮC HẠ MÀU & ẨN THEO CHU KỲ KHỎI BỆNH / Ủ BỆNH TỪNG NHÓM BỆNH
-    // =========================================================================
     function getDiseaseCycleConfig(diseaseName) {
       const name = (diseaseName || "").toLowerCase();
-
-      // Nhóm 1: Bệnh hô hấp cấp tính ngắn ngày (Cúm) -> 7 ngày hạ màu, 14 ngày ẩn
-      if (name.includes("cúm")) {
-        return { downgradeDays: 7, hideDays: 14, groupLabel: "Chu kỳ 7/14 ngày" };
-      }
-
-      // Nhóm 2: Sốt xuất huyết, Tay chân miệng, Sốt rét -> 14 ngày hạ màu, 28 ngày ẩn
+      if (name.includes("cúm")) return { downgradeDays: 7, hideDays: 14, groupLabel: "Chu kỳ 7/14 ngày" };
       if (name.includes("sốt xuất huyết") || name.includes("tay chân miệng") || name.includes("sốt rét")) {
         return { downgradeDays: 14, hideDays: 28, groupLabel: "Chu kỳ 14/28 ngày" };
       }
-
-      // Nhóm 3: Sởi, Thủy đậu, Ho gà, Bạch hầu, Viêm não, Dại -> 21 ngày hạ màu, 30 ngày ẩn
       return { downgradeDays: 21, hideDays: 30, groupLabel: "Chu kỳ 21/30 ngày" };
     }
 
@@ -632,23 +612,23 @@
       };
     }
 
+    // Mỗi loại bệnh trên 1 tỉnh chỉ giữ bản tin MỚI NHẤT (không cộng dồn trùng nhiều báo)
     function getActiveRecordsByProvince(provinceId) {
-  const activeList = outbreaksData
-    .filter(item => item.provinceId === provinceId)
-    .map(evaluateOutbreakDecay)
-    .filter(item => item.effectiveLevel > 0);
+      const activeList = outbreaksData
+        .filter(item => item.provinceId === provinceId)
+        .map(evaluateOutbreakDecay)
+        .filter(item => item.effectiveLevel > 0);
 
-  // Gom nhóm theo từng loại bệnh: mỗi bệnh trên 1 tỉnh chỉ giữ bản tin MỚI NHẤT (tránh cộng dồn nhiều báo)
-  const latestByDisease = new Map();
-  activeList.forEach(item => {
-    const existing = latestByDisease.get(item.disease);
-    if (!existing || (Number(item.timestamp) || 0) > (Number(existing.timestamp) || 0)) {
-      latestByDisease.set(item.disease, item);
+      const latestByDisease = new Map();
+      activeList.forEach(item => {
+        const existing = latestByDisease.get(item.disease);
+        if (!existing || (Number(item.timestamp) || 0) > (Number(existing.timestamp) || 0)) {
+          latestByDisease.set(item.disease, item);
+        }
+      });
+
+      return Array.from(latestByDisease.values());
     }
-  });
-
-  return Array.from(latestByDisease.values());
-}
 
     function getLevelConfig(level) {
       if (level === 3) return { label: "Cấp 3 • Nguy cơ cao", color: "#dc2626", bgClass: "bg-red-50 border-red-200 text-red-800", badgeClass: "bg-red-600 text-white" };
@@ -657,9 +637,6 @@
       return { label: "An toàn / Kiểm soát", color: "#64748b", bgClass: "bg-slate-50 border-slate-200 text-slate-700", badgeClass: "bg-slate-200 text-slate-700" };
     }
 
-    // =========================================================================
-    // PHÂN QUYỀN CHẾ ĐỘ XEM & MỞ KHÓA QUẢN TRỊ VIÊN
-    // =========================================================================
     function handleSecretAdminTap() {
       if (isAdminUnlocked) {
         showToast("Bạn đang ở chế độ Quản trị viên.");
@@ -728,9 +705,6 @@
       }
     }
 
-    // =========================================================================
-    // ĐỒNG BỘ GOOGLE SHEETS CSV & LỊCH TỰ ĐỘNG 05:00 & 17:00
-    // =========================================================================
     function getActiveGoogleSheetUrl() {
       if (PUBLIC_GOOGLE_SHEET_CSV_URL && PUBLIC_GOOGLE_SHEET_CSV_URL.trim() !== "") {
         return PUBLIC_GOOGLE_SHEET_CSV_URL.trim();
@@ -799,7 +773,7 @@
           if (!PROVINCES_34.some(p => p.id === provId)) continue;
 
           const ts = Number(r[9]) || Date.now();
-          if (Date.now() - ts > THIRTY_DAYS_MS) continue; // Bỏ qua bản ghi quá 30 ngày
+          if (Date.now() - ts > THIRTY_DAYS_MS) continue;
 
           const casesNum = parseInt(r[2], 10) || 25;
           const lvl = parseInt(r[3], 10) || (casesNum >= 500 ? 3 : (casesNum >= 50 ? 2 : 1));
@@ -842,7 +816,7 @@
     function saveAndSyncGoogleSheet() {
       const input = document.getElementById("googleSheetCsvInput").value.trim();
       if (!input) {
-        showToast("Vui lòng dán đường link CSV từ Google Sheets!");
+        showToast("https://docs.google.com/spreadsheets/d/e/2PACX-1vTa31jMDqm_3pO9OVZ_je9zzVrCw2fBk7PSugLcz_lJnHfkIukcy4UuPaQ_JTp2OI36p1C0RXONShQP/pub?gid=0&single=true&output=csv");
         return;
       }
       localStorage.setItem(STORAGE_KEY_SHEET_URL, input);
@@ -867,9 +841,6 @@
       }, 60000);
     }
 
-    // =========================================================================
-    // LƯU TRỮ DỮ LIỆU & KHỞI TẠO BẢN ĐỒ LEAFLET (NỀN ESRI KHÔNG LỖI 403)
-    // =========================================================================
     function loadOutbreaksFromStorage() {
       try {
         const saved = localStorage.getItem(STORAGE_KEY_OUTBREAKS);
@@ -911,9 +882,6 @@
       if (map) map.flyTo([16.2, 106.5], 6, { duration: 0.8 });
     }
 
-    // =========================================================================
-    // VẼ VÒNG TRÒN DỊCH TỄ & DANH SÁCH 34 TỈNH/THÀNH
-    // =========================================================================
     function renderAll() {
       const searchKw = (document.getElementById("searchProvinceInput").value || "").toLowerCase().trim();
       const diseaseFilter = document.getElementById("filterDiseaseSelect").value;
@@ -1026,9 +994,6 @@
       renderAll();
     }
 
-    // =========================================================================
-    // NGĂN KÉO CHI TIẾT TỈNH / THÀNH PHỐ
-    // =========================================================================
     function openProvinceDetail(provinceId) {
       const province = PROVINCES_34.find(p => p.id === provinceId);
       if (!province) return;
@@ -1052,7 +1017,7 @@
         </div>
         <p class="text-xs mt-1 opacity-90">
           ${maxLevel > 0
-            ? "Số liệu tổng hợp trong 30 ngày gần nhất. Hệ thống tự động hạ màu khi qua thời gian khỏi bệnh / chu kỳ lây truyền."
+            ? "Số liệu mới nhất trong 30 ngày qua. Hệ thống tự động hạ màu khi qua thời gian khỏi bệnh / chu kỳ lây truyền."
             : "Địa phương hiện ở trạng thái an toàn, chưa ghi nhận ổ dịch mới trong 30 ngày gần nhất."}
         </p>
       `;
@@ -1156,9 +1121,6 @@
       document.getElementById("detailDrawer").classList.add("translate-x-full");
     }
 
-    // =========================================================================
-    // ĐỊNH VỊ GPS & TÌM ĐƯỜNG CẢNH BÁO VÙNG DỊCH
-    // =========================================================================
     function locateUserGPS(isManualTrigger = false) {
       if (!navigator.geolocation) {
         if (isManualTrigger) showToast("Trình duyệt không hỗ trợ định vị GPS.");
@@ -1259,9 +1221,6 @@
       document.getElementById("routeWarningResult").classList.add("hidden");
     }
 
-    // =========================================================================
-    // MODAL NHẬP DỮ LIỆU & QUY TẮC
-    // =========================================================================
     function openAddDataModal() {
       if (!isAdminUnlocked) return;
       document.getElementById("addDataModal").classList.remove("hidden");
@@ -1322,9 +1281,6 @@
       el._timer = setTimeout(() => el.classList.add("hidden"), 3200);
     }
 
-    // =========================================================================
-    // KHỞI CHẠY ỨNG DỤNG
-    // =========================================================================
     window.onload = function () {
       const provSelect = document.getElementById("inputProvinceId");
       const destSelect = document.getElementById("routeDestSelect");
