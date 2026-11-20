@@ -633,11 +633,22 @@
     }
 
     function getActiveRecordsByProvince(provinceId) {
-      return outbreaksData
-        .filter(item => item.provinceId === provinceId)
-        .map(evaluateOutbreakDecay)
-        .filter(item => item.effectiveLevel > 0);
+  const activeList = outbreaksData
+    .filter(item => item.provinceId === provinceId)
+    .map(evaluateOutbreakDecay)
+    .filter(item => item.effectiveLevel > 0);
+
+  // Gom nhóm theo từng loại bệnh: mỗi bệnh trên 1 tỉnh chỉ giữ bản tin MỚI NHẤT (tránh cộng dồn nhiều báo)
+  const latestByDisease = new Map();
+  activeList.forEach(item => {
+    const existing = latestByDisease.get(item.disease);
+    if (!existing || (Number(item.timestamp) || 0) > (Number(existing.timestamp) || 0)) {
+      latestByDisease.set(item.disease, item);
     }
+  });
+
+  return Array.from(latestByDisease.values());
+}
 
     function getLevelConfig(level) {
       if (level === 3) return { label: "Cấp 3 • Nguy cơ cao", color: "#dc2626", bgClass: "bg-red-50 border-red-200 text-red-800", badgeClass: "bg-red-600 text-white" };
