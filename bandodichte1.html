@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Bản Đồ Dịch Tễ Việt Nam - 34 Tỉnh/Thành & Tự Động Hóa CDC</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Leaflet Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    #vietnamLeafletMap { width: 100%; height: 100%; z-index: 1; background: #e2e8f0; }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.85; }
+      70% { transform: scale(1.18); opacity: 0; }
+      100% { transform: scale(0.95); opacity: 0; }
+    }
+    .pulse-marker-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      animation: pulseRing 2.2s infinite ease-out;
+      pointer-events: none;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden select-none">
+
+  <!-- THANH TIÊU ĐỀ TRÊN CÙNG -->
+  <header class="bg-white border-b border-slate-200 px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2 z-30 shrink-0 shadow-xs">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <!-- Bấm 5 lần vào logo trái tim để mở khóa Quản trị viên -->
+      <button id="secretAdminLogoBtn" onclick="handleSecretAdminTap()" title="Bản đồ Dịch tễ Việt Nam"
+        class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-rose-600 to-red-700 text-white flex items-center justify-center shadow-sm shrink-0 active:scale-95 transition cursor-pointer">
+        <i class="ph-fill ph-heartbeat text-xl sm:text-2xl"></i>
+      </button>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm sm:text-base font-extrabold text-slate-900 truncate">Bản Đồ Dịch Tễ Việt Nam</h1>
+          <span id="roleBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+            Chế độ Xem
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-500 truncate">Theo dõi trong 30 ngày gần nhất • Tự động đồng bộ 05:00 & 17:00</p>
+      </div>
+    </div>
+
+    <!-- CÁC NÚT CÔNG CỤ BÊN PHẢI -->
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <button onclick="openTable1Modal()"
+        class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition cursor-pointer">
+        <i class="ph-bold ph-info text-sm text-blue-600"></i>
+        <span class="hidden md:inline">Quy tắc & Tự động</span>
+      </button>
+
+      <button id="adminSyncConfigBtn" onclick="openTable1Modal()"
+        class="hidden px-2.5 py-1.5 rounded-lg text-xs font-bold bg-violet-100 hover:bg-violet-200 text-violet-800 items-center gap-1.5 transition cursor-pointer">
+        <i class="ph-bold ph-gear text-sm"></i>
+        <span class="hidden sm:inline">Cấu hình 05h & 17h</span>
+      </button>
+
+      <button id="adminAddCaseBtn" onclick="openAddDataModal()"
+        class="hidden px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white items-center gap-1.5 shadow-xs transition cursor-pointer">
+        <i class="ph-bold ph-plus-circle text-sm"></i>
+        <span>Nhập ca bệnh</span>
+      </button>
+
+      <button id="adminLogoutBtn" onclick="logoutAdminMode()" title="Khóa lại chế độ Chỉ xem"
+        class="hidden px-2 py-1.5 rounded-lg text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-800 items-center gap-1 transition cursor-pointer">
+        <i class="ph-bold ph-lock-simple text-sm"></i>
+        <span class="hidden lg:inline">Khóa Admin</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- KHU VỰC CHÍNH -->
+  <div class="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
+
+    <!-- SIDEBAR TRÁI -->
+    <aside id="leftSidebar" class="w-full lg:w-[370px] xl:w-[400px] bg-white border-r border-slate-200 flex flex-col z-20 h-[44%] lg:h-full shrink-0 shadow-md lg:shadow-none">
+      <div class="p-3 border-b border-slate-100 grid grid-cols-4 gap-1.5 bg-slate-50/70 shrink-0">
+        <div class="bg-white p-2 rounded-xl border border-slate-200/80 text-center">
+          <div class="text-[10px] font-bold text-slate-400 uppercase">Tổng ca</div>
+          <div id="statTotalCases" class="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5">0</div>
+        </div>
+        <div class="bg-red-50/80 p-2 rounded-xl border border-red-200/80 text-center">
+          <div class="text-[10px] font-bold text-red-600 uppercase">Cấp 3 (Đỏ)</div>
+          <div id="statLevel3Count" class="text-sm sm:text-base font-extrabold text-red-700 mt-0.5">0</div>
+        </div>
+        <div class="bg-amber-50/80 p-2 rounded-xl border border-amber-200/80 text-center">
+          <div class="text-[10px] font-bold text-amber-600 uppercase">Cấp 2 (Vàng)</div>
+          <div id="statLevel2Count" class="text-sm sm:text-base font-extrabold text-amber-700 mt-0.5">0</div>
+        </div>
+        <div class="bg-emerald-50/80 p-2 rounded-xl border border-emerald-200/80 text-center">
+          <div class="text-[10px] font-bold text-emerald-600 uppercase">Cấp 1 (Xanh)</div>
+          <div id="statLevel1Count" class="text-sm sm:text-base font-extrabold text-emerald-700 mt-0.5">0</div>
+        </div>
+      </div>
+
+      <div class="px-3 py-2 bg-violet-50 border-b border-violet-100 flex items-center justify-between gap-2 text-[11px] shrink-0">
+        <div class="flex items-center gap-1.5 text-violet-900 font-semibold truncate">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+          <span id="autoSyncStatusText" class="truncate">Đang dùng dữ liệu mẫu trong tháng</span>
+        </div>
+        <button onclick="manualRefreshSheet()" class="text-violet-700 hover:text-violet-950 font-bold underline shrink-0 cursor-pointer">
+          Làm mới
+        </button>
+      </div>
+
+      <div class="p-3 border-b border-slate-100 space-y-2 shrink-0">
+        <div class="relative">
+          <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input id="searchProvinceInput" type="text" oninput="renderAll()"
+            placeholder="Tìm tỉnh/thành (VD: Ninh Bình, Hà Nội, Đà Nẵng)..."
+            class="w-full pl-9 pr-8 py-2 text-xs bg-slate-100 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-blue-500 transition" />
+          <button onclick="clearSearch()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+            <i class="ph-bold ph-x text-xs"></i>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <select id="filterDiseaseSelect" onchange="renderAll()"
+            class="w-full px-2.5 py-1.5 text-xs font-semibold bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+            <option value="ALL">Tất cả 10 dịch bệnh</option>
+            <option value="Sốt xuất huyết">Sốt xuất huyết</option>
+            <option value="Tay chân miệng">Tay chân miệng</option>
+            <option value="Sởi">Sởi</option>
+            <option value="Bạch hầu">Bạch hầu</option>
+            <option value="Ho gà">Ho gà</option>
+            <option value="Cúm mùa / Cúm A">Cúm mùa / Cúm A</option>
+            <option value="Bệnh Dại">Bệnh Dại</option>
+            <option value="Thủy đậu">Thủy đậu</option>
+            <option value="Sốt rét">Sốt rét</option>
+            <option value="Viêm não Nhật Bản">Viêm não Nhật Bản</option>
+          </select>
+
+          <select id="filterLevelSelect" onchange="renderAll()"
+            class="w-full px-2.5 py-1.5 text-xs font-semibold bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+            <option value="ALL">Mọi cấp độ cảnh báo</option>
+            <option value="3">Cấp 3 - Đỏ (≥ 500 ca)</option>
+            <option value="2">Cấp 2 - Vàng (50 - 499 ca)</option>
+            <option value="1">Cấp 1 - Xanh (&lt; 50 ca)</option>
+            <option value="0">An toàn / Đã kiểm soát</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="provinceListContainer" class="flex-1 overflow-y-auto p-2.5 space-y-2 bg-slate-50/40"></div>
+    </aside>
+
+    <!-- KHUNG BẢN ĐỒ LEAFLET -->
+    <main class="flex-1 relative h-[56%] lg:h-full">
+      <div id="vietnamLeafletMap"></div>
+
+      <div class="absolute top-3 right-3 z-20 flex flex-col gap-2">
+        <button onclick="locateUserGPS(true)" title="Định vị GPS của tôi"
+          class="w-10 h-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 shadow-md border border-slate-200 flex items-center justify-center transition cursor-pointer">
+          <i id="gpsBtnIcon" class="ph-bold ph-crosshair text-lg text-blue-600"></i>
+        </button>
+        <button onclick="toggleDirectionsBox()" title="Tìm đường & Cảnh báo vùng dịch trên tuyến"
+          class="w-10 h-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 shadow-md border border-slate-200 flex items-center justify-center transition cursor-pointer">
+          <i class="ph-bold ph-navigation-arrow text-lg text-emerald-600"></i>
+        </button>
+        <button onclick="resetMapView()" title="Thu phóng toàn cảnh Việt Nam"
+          class="w-10 h-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 shadow-md border border-slate-200 flex items-center justify-center transition cursor-pointer">
+          <i class="ph-bold ph-corners-out text-lg text-slate-700"></i>
+        </button>
+      </div>
+
+      <div class="hidden sm:flex absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-xs px-3.5 py-2.5 rounded-xl shadow-md border border-slate-200 items-center gap-4 text-xs">
+        <div class="flex items-center gap-1.5 font-bold text-slate-700">
+          <span class="w-3 h-3 rounded-full bg-red-600 inline-block"></span> Cấp 3 (≥500 ca)
+        </div>
+        <div class="flex items-center gap-1.5 font-bold text-slate-700">
+          <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Cấp 2 (50–499)
+        </div>
+        <div class="flex items-center gap-1.5 font-bold text-slate-700">
+          <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Cấp 1 (&lt;50 ca)
+        </div>
+      </div>
+
+      <!-- Thẻ vị trí GPS -->
+      <div id="userLocationCard" class="hidden absolute bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:w-80 z-20 bg-white rounded-2xl shadow-xl border border-slate-200 p-3.5">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping"></span>
+            <h4 id="userLocationProvinceTitle" class="text-xs font-extrabold text-slate-900">Vị trí của bạn</h4>
+          </div>
+          <button onclick="dismissUserLocationCard()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+            <i class="ph-bold ph-x text-sm"></i>
+          </button>
+        </div>
+        <p id="userLocationStatusDesc" class="text-xs text-slate-600 mt-1.5 leading-relaxed"></p>
+        <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+          <span id="userLocationAccuracy" class="text-[11px] text-slate-400"></span>
+          <button id="userLocationDetailBtn" class="text-xs font-bold text-blue-600 hover:underline cursor-pointer">
+            Xem chi tiết tỉnh →
+          </button>
+        </div>
+      </div>
+
+      <!-- Bảng tìm đường -->
+      <div id="directionsPanel" class="hidden absolute top-3 left-3 right-14 sm:right-auto sm:w-88 z-20 bg-white rounded-2xl shadow-xl border border-slate-200 p-3.5">
+        <div class="flex items-center justify-between mb-2.5">
+          <h3 class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+            <i class="ph-bold ph-path text-emerald-600 text-base"></i>
+            Chỉ đường & Cảnh báo vùng dịch
+          </h3>
+          <button onclick="toggleDirectionsBox(false)" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+            <i class="ph-bold ph-x text-sm"></i>
+          </button>
+        </div>
+        <div class="space-y-2">
+          <input id="routeOriginInput" type="text" placeholder="Điểm đi (VD: Hà Nội hoặc dùng GPS)"
+            class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500" />
+          <select id="routeDestSelect" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500"></select>
+          <div class="flex gap-2 pt-1">
+            <button onclick="calculateAndDrawRoute()"
+              class="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer">
+              Vẽ lộ trình & Kiểm tra
+            </button>
+            <button onclick="clearDrawnRoute()"
+              class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer">
+              Xóa
+            </button>
+          </div>
+        </div>
+        <div id="routeWarningResult" class="hidden mt-2.5 p-2.5 rounded-xl text-xs leading-relaxed"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- NGĂN KÉO CHI TIẾT TỈNH / THÀNH PHỐ -->
+  <div id="detailDrawerBackdrop" onclick="closeProvinceDetail()" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-40"></div>
+  <div id="detailDrawer" class="fixed top-0 right-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-50 translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+      <div>
+        <span id="drawerProvinceCode" class="text-[11px] font-extrabold uppercase tracking-wider text-blue-600">MÃ TỈNH</span>
+        <h2 id="drawerProvinceName" class="text-lg font-extrabold text-slate-900">Tên Tỉnh / Thành phố</h2>
+      </div>
+      <button onclick="closeProvinceDetail()" class="w-9 h-9 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-600 cursor-pointer">
+        <i class="ph-bold ph-x text-base"></i>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4 space-y-4">
+      <div id="drawerAlertBanner" class="p-3.5 rounded-2xl border"></div>
+
+      <div>
+        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">Tình hình dịch bệnh ghi nhận (30 ngày gần nhất)</h3>
+        <div id="drawerDiseasesList" class="flex flex-wrap gap-1.5"></div>
+      </div>
+
+      <div class="flex gap-2">
+        <button id="drawerRouteToBtn" class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer">
+          <i class="ph-bold ph-navigation-arrow text-sm"></i>
+          Chỉ đường tới địa phương này
+        </button>
+      </div>
+
+      <div id="drawerAdminActions" class="hidden p-3 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
+        <div class="text-[11px] font-extrabold uppercase text-amber-800 flex items-center gap-1">
+          <i class="ph-bold ph-shield-check"></i> Thao tác Quản trị viên (Chu kỳ hồi phục từng bệnh)
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="drawerConfirmActiveBtn" class="py-2 px-2.5 rounded-lg bg-white hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold cursor-pointer">
+            Xác nhận vẫn có ca mới
+          </button>
+          <button id="drawerMarkClearedBtn" class="py-2 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">
+            Đã khỏi / Hết dịch (Ẩn)
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">Nguồn tin CDC & Báo chí chính thống</h3>
+        <div id="drawerArticlesContainer" class="space-y-2.5"></div>
+      </div>
+
+      <div>
+        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">Khuyến cáo & Biện pháp dự phòng</h3>
+        <div id="drawerPreventionContainer" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MỞ KHÓA QUẢN TRỊ VIÊN -->
+  <div id="adminLoginModal" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+          <i class="ph-bold ph-key text-amber-600 text-lg"></i> Mở khóa Quản trị viên
+        </h3>
+        <button onclick="closeAdminLoginModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-600 mb-3">Nhập mật khẩu quản trị để mở khóa tính năng nhập ca bệnh và cấu hình đồng bộ Google Sheets.</p>
+      <input id="adminPasswordInput" type="password" onkeydown="if(event.key==='Enter') submitAdminPassword()"
+        placeholder="Nhập mã PIN quản trị..."
+        class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-blue-500 mb-3" />
+      <div class="flex justify-end gap-2">
+        <button onclick="closeAdminLoginModal()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 cursor-pointer">Hủy</button>
+        <button onclick="submitAdminPassword()" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer">Mở khóa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NHẬP CA BỆNH MỚI -->
+  <div id="addDataModal" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-extrabold text-slate-900">Cập nhật dữ liệu dịch bệnh mới</h3>
+        <button onclick="closeAddDataModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+      <form onsubmit="submitNewOutbreak(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Tỉnh / Thành phố (34 đơn vị)</label>
+          <select id="inputProvinceId" required class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Loại dịch bệnh</label>
+            <select id="inputDisease" required class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white">
+              <option value="Sốt xuất huyết">Sốt xuất huyết</option>
+              <option value="Tay chân miệng">Tay chân miệng</option>
+              <option value="Sởi">Sởi</option>
+              <option value="Bạch hầu">Bạch hầu</option>
+              <option value="Ho gà">Ho gà</option>
+              <option value="Cúm mùa / Cúm A">Cúm mùa / Cúm A</option>
+              <option value="Bệnh Dại">Bệnh Dại</option>
+              <option value="Thủy đậu">Thủy đậu</option>
+              <option value="Sốt rét">Sốt rét</option>
+              <option value="Viêm não Nhật Bản">Viêm não Nhật Bản</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Số ca mắc mới ghi nhận</label>
+            <input id="inputCases" type="number" min="1" value="65" oninput="autoSuggestLevel()" required
+              class="w-full px-3 py-2 border border-slate-300 rounded-xl" />
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Cấp độ cảnh báo</label>
+          <select id="inputLevel" class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white">
+            <option value="1">Cấp 1 - Màu Xanh (&lt; 50 ca)</option>
+            <option value="2" selected>Cấp 2 - Màu Vàng (50 – 499 ca)</option>
+            <option value="3">Cấp 3 - Màu Đỏ (≥ 500 ca)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Nguồn báo / CDC</label>
+          <input id="inputSourceName" type="text" placeholder="VD: CDC Ninh Bình / Báo Sức Khỏe & Đời Sống" required
+            class="w-full px-3 py-2 border border-slate-300 rounded-xl" />
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Tiêu đề bài báo / thông báo</label>
+          <input id="inputArticleTitle" type="text" placeholder="Nhập tiêu đề bài viết..." required
+            class="w-full px-3 py-2 border border-slate-300 rounded-xl" />
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Đường link bài báo gốc (URL)</label>
+          <input id="inputArticleUrl" type="url" placeholder="https://..."
+            class="w-full px-3 py-2 border border-slate-300 rounded-xl" />
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeAddDataModal()" class="px-4 py-2 rounded-xl bg-slate-100 font-bold text-slate-700 cursor-pointer">Hủy</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 font-bold text-white cursor-pointer">Lưu lên bản đồ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL QUY TẮC & CẤU HÌNH -->
+  <div id="table1Modal" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-base font-extrabold text-slate-900">Quy tắc Chu kỳ Khỏi bệnh & Tự động hóa 05:00 – 17:00</h3>
+        <button onclick="closeTable1Modal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div class="font-extrabold text-slate-800">1. Phân cấp 3 màu cảnh báo (Dữ liệu trong 30 ngày gần nhất):</div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="p-2.5 rounded-xl bg-red-50 border border-red-200">
+            <div class="font-extrabold text-red-700">Cấp 3 (Đỏ)</div>
+            <div class="text-slate-600 mt-0.5">Từ 500 ca mới trở lên</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+            <div class="font-extrabold text-amber-700">Cấp 2 (Vàng)</div>
+            <div class="text-slate-600 mt-0.5">Từ 50 đến 499 ca mới</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+            <div class="font-extrabold text-emerald-700">Cấp 1 (Xanh)</div>
+            <div class="text-slate-600 mt-0.5">Dưới 50 ca mới rải rác</div>
+          </div>
+        </div>
+
+        <div class="font-extrabold text-slate-800 pt-1">2. Tự động hạ màu & ẩn khi qua thời gian khỏi bệnh / ủ bệnh:</div>
+        <div class="text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
+          <div>• <strong>Nhóm cấp tính ngắn ngày (Cúm mùa / Cúm A):</strong> Hạ 1 bậc màu sau <strong>7 ngày</strong> không ca mới; ẩn sau <strong>14 ngày</strong>.</div>
+          <div>• <strong>Nhóm cấp tính trung bình (Sốt xuất huyết, Tay chân miệng, Sốt rét):</strong> Hạ 1 bậc màu sau <strong>14 ngày</strong>; ẩn sau <strong>28 ngày</strong>.</div>
+          <div>• <strong>Nhóm ủ bệnh / hồi phục dài (Sởi, Thủy đậu, Ho gà, Bạch hầu, Viêm não, Dại):</strong> Hạ 1 bậc màu sau <strong>21 ngày</strong>; ẩn sau <strong>30 ngày</strong>.</div>
+        </div>
+      </div>
+
+      <div id="adminSheetConfigSection" class="hidden space-y-2.5 pt-2 border-t border-slate-200 text-xs">
+        <div class="font-extrabold text-violet-900">3. Kết nối Google Sheets CSV (Cập nhật 05:00 & 17:00):</div>
+        <input id="googleSheetCsvInput" type="url" placeholder="Dán link Google Sheets đã xuất bản dạng .csv vào đây..."
+          class="w-full px-3 py-2 border border-slate-300 rounded-xl" />
+        <div class="flex flex-wrap gap-2">
+          <button onclick="saveAndSyncGoogleSheet()" class="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold cursor-pointer">
+            Lưu & Đồng bộ ngay
+          </button>
+          <button onclick="disconnectGoogleSheet()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer">
+            Ngắt kết nối
+          </button>
+          <button onclick="resetToDefaultData()" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold cursor-pointer">
+            Khôi phục dữ liệu mẫu
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastNotification" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg"></div>
+
+  <script>
+    // =========================================================================
+    // CẤU HÌNH QUẢN TRỊ & ĐƯỜNG LINK GOOGLE SHEETS CÔNG KHAI
+    // =========================================================================
+    const PUBLIC_GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTa31jMDqm_3pO9OVZ_je9zzVrCw2fBk7PSugLcz_lJnHfkIukcy4UuPaQ_JTp2OI36p1C0RXONShQP/pub?gid=0&single=true&output=csv";
+    const ADMIN_SECRET_PASSCODE = "30902002a@A";
+
+    const STORAGE_KEY_OUTBREAKS = "vn_epimap_outbreaks_v3";
+    const STORAGE_KEY_SHEET_URL = "vn_epimap_sheet_csv_url_v3";
+    const STORAGE_KEY_ADMIN_AUTH = "vn_epimap_admin_unlocked_v3";
+
+    const PROVINCES_34 = [
+      { id: "HN", name: "TP. Hà Nội", lat: 21.0285, lng: 105.8542, region: "Bắc Bộ" },
+      { id: "HCM", name: "TP. Hồ Chí Minh", lat: 10.7769, lng: 106.7009, region: "Nam Bộ" },
+      { id: "HP", name: "TP. Hải Phòng", lat: 20.8449, lng: 106.6881, region: "Bắc Bộ" },
+      { id: "DN", name: "TP. Đà Nẵng", lat: 16.0544, lng: 108.2022, region: "Trung Bộ" },
+      { id: "CT", name: "TP. Cần Thơ", lat: 10.0452, lng: 105.7469, region: "Nam Bộ" },
+      { id: "HUE", name: "TP. Huế", lat: 16.4637, lng: 107.5909, region: "Trung Bộ" },
+      { id: "NB", name: "Ninh Bình", lat: 20.2506, lng: 105.9745, region: "Bắc Bộ" },
+      { id: "QN", name: "Quảng Ninh", lat: 21.0064, lng: 107.2925, region: "Bắc Bộ" },
+      { id: "BN", name: "Bắc Ninh", lat: 21.1861, lng: 106.0763, region: "Bắc Bộ" },
+      { id: "HY", name: "Hưng Yên", lat: 20.6464, lng: 106.0511, region: "Bắc Bộ" },
+      { id: "PT", name: "Phú Thọ", lat: 21.3227, lng: 105.4019, region: "Bắc Bộ" },
+      { id: "TN", name: "Thái Nguyên", lat: 21.5942, lng: 105.8482, region: "Bắc Bộ" },
+      { id: "TQ", name: "Tuyên Quang", lat: 21.8236, lng: 105.2142, region: "Bắc Bộ" },
+      { id: "LC", name: "Lào Cai", lat: 22.4856, lng: 103.9707, region: "Bắc Bộ" },
+      { id: "CB", name: "Cao Bằng", lat: 22.6657, lng: 106.2579, region: "Bắc Bộ" },
+      { id: "LS", name: "Lạng Sơn", lat: 21.8537, lng: 106.7615, region: "Bắc Bộ" },
+      { id: "SL", name: "Sơn La", lat: 21.3256, lng: 103.9188, region: "Bắc Bộ" },
+      { id: "DB", name: "Điện Biên", lat: 21.3860, lng: 103.0230, region: "Bắc Bộ" },
+      { id: "LCH", name: "Lai Châu", lat: 22.3964, lng: 103.4582, region: "Bắc Bộ" },
+      { id: "TH", name: "Thanh Hóa", lat: 19.8067, lng: 105.7852, region: "Trung Bộ" },
+      { id: "NA", name: "Nghệ An", lat: 18.6796, lng: 105.6813, region: "Trung Bộ" },
+      { id: "HT", name: "Hà Tĩnh", lat: 18.3559, lng: 105.8877, region: "Trung Bộ" },
+      { id: "QT", name: "Quảng Trị", lat: 16.7504, lng: 107.1856, region: "Trung Bộ" },
+      { id: "QNG", name: "Quảng Ngãi", lat: 15.1214, lng: 108.8044, region: "Trung Bộ" },
+      { id: "GL", name: "Gia Lai", lat: 13.9833, lng: 108.0000, region: "Tây Nguyên" },
+      { id: "DL", name: "Đắk Lắk", lat: 12.6667, lng: 108.0500, region: "Tây Nguyên" },
+      { id: "KH", name: "Khánh Hòa", lat: 12.2388, lng: 109.1967, region: "Trung Bộ" },
+      { id: "LD", name: "Lâm Đồng", lat: 11.9404, lng: 108.4583, region: "Tây Nguyên" },
+      { id: "DNI", name: "Đồng Nai", lat: 10.9574, lng: 106.8427, region: "Nam Bộ" },
+      { id: "TNI", name: "Tây Ninh", lat: 11.3352, lng: 106.1099, region: "Nam Bộ" },
+      { id: "DT", name: "Đồng Tháp", lat: 10.4938, lng: 105.6882, region: "Nam Bộ" },
+      { id: "AG", name: "An Giang", lat: 10.5216, lng: 105.1259, region: "Nam Bộ" },
+      { id: "VL", name: "Vĩnh Long", lat: 10.2537, lng: 105.9722, region: "Nam Bộ" },
+      { id: "CM", name: "Cà Mau", lat: 9.1769, lng: 105.1524, region: "Nam Bộ" }
+    ];
+
+    const PREVENTION_GUIDES = {
+      "Sốt xuất huyết": [
+        "Đậy kín tất cả dụng cụ chứa nước để muỗi không vào đẻ trứng, thả cá bảy màu diệt lăng quăng/bọ gậy.",
+        "Ngủ màn, mặc quần áo dài tay phòng muỗi đốt ngay cả ban ngày.",
+        "Khi sốt cao đột ngột, đau đầu, đau hốc mắt cần đến cơ sở y tế khám ngay, không tự ý truyền dịch tại nhà."
+      ],
+      "Tay chân miệng": [
+        "Rửa tay thường xuyên bằng xà phòng dưới vòi nước chảy cho cả trẻ em và người chăm sóc.",
+        "Lau sạch bề mặt, đồ chơi, dụng cụ học tập hàng ngày bằng dung dịch sát khuẩn thông thường.",
+        "Cách ly trẻ mắc bệnh tại nhà ít nhất 10 ngày để tránh lây lan tại trường học."
+      ],
+      "Sởi": [
+        "Đưa trẻ đi tiêm vắc xin phòng bệnh Sởi đầy đủ và đúng lịch theo chương trình Tiêm chủng mở rộng.",
+        "Hạn chế tiếp xúc gần với người có triệu chứng sốt, phát ban, ho, chảy nước mũi.",
+        "Tăng cường dinh dưỡng, giữ vệ sinh mũi họng và thông thoáng nhà cửa."
+      ],
+      "Bạch hầu": [
+        "Tiêm vắc xin phòng Bạch hầu đầy đủ (mũi cơ bản và mũi nhắc lại).",
+        "Khi có biểu hiện đau họng, sốt nhẹ, xuất hiện giả mạc trắng xám ở họng cần đi khám cách ly ngay."
+      ],
+      "Cúm mùa / Cúm A": [
+        "Đeo khẩu trang tại nơi đông người, che miệng khi ho hoặc hắt hơi.",
+        "Tiêm vắc xin cúm mùa nhắc lại hàng năm, đặc biệt với người cao tuổi, trẻ nhỏ và phụ nữ mang thai."
+      ],
+      "Bệnh Dại": [
+        "Tiêm phòng vắc xin dại đầy đủ cho chó, mèo nuôi; không thả rông vật nuôi.",
+        "Khi bị chó, mèo cắn hoặc cào xước, rửa ngay vết thương dưới vòi nước sạch với xà phòng 15 phút và đi tiêm huyết thanh/vắc xin dại ngay lập tức."
+      ]
+    };
+
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const NOW_TS = Date.now();
+
+    // Dữ liệu mẫu chỉ phản ánh số ca phát sinh gần đây trong tháng
+    const DEFAULT_OUTBREAKS = [
+      { id: "ob1", provinceId: "HN", disease: "Sốt xuất huyết", cases: 316, level: 2, trend: "Nguồn CDC địa phương", sourceName: "CDC TP. Hà Nội", articleTitle: "Hà Nội ghi nhận 316 ca mắc sốt xuất huyết trong tuần, tập trung xử lý ổ dịch", articleUrl: "https://soyte.hanoi.gov.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 1 * DAY_MS },
+      { id: "ob2", provinceId: "HCM", disease: "Tay chân miệng", cases: 240, level: 2, trend: "Cập nhật trong tuần", sourceName: "HCDC TP. Hồ Chí Minh", articleTitle: "TP.HCM giám sát chặt các ca mắc tay chân miệng mới tại trường mầm non", articleUrl: "https://hcdc.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 2 * DAY_MS },
+      { id: "ob3", provinceId: "NB", disease: "Sốt xuất huyết", cases: 85, level: 2, trend: "Nguồn CDC địa phương", sourceName: "CDC Ninh Bình / Cổng TTĐT Y tế", articleTitle: "Ninh Bình tăng cường giám sát dịch tễ, xử lý triệt để ổ dịch sốt xuất huyết mới", articleUrl: "https://soyte.ninhbinh.gov.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 2 * DAY_MS },
+      { id: "ob4", provinceId: "DN", disease: "Sốt xuất huyết", cases: 190, level: 2, trend: "Nguồn CDC địa phương", sourceName: "CDC TP. Đà Nẵng", articleTitle: "Đà Nẵng kiểm soát chặt chẽ các ổ dịch sốt xuất huyết phát sinh trong tháng", articleUrl: "https://soyte.danang.gov.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 1 * DAY_MS },
+      { id: "ob5", provinceId: "DL", disease: "Sốt xuất huyết", cases: 520, level: 3, trend: "Cao điểm trong tháng", sourceName: "Báo Tuổi Trẻ Sức khỏe", articleTitle: "Đắk Lắk ghi nhận thêm 520 ca sốt xuất huyết mới trong tháng qua", articleUrl: "https://tuoitre.vn/suc-khoe.htm", updatedAt: "Hôm nay", timestamp: NOW_TS - 3 * DAY_MS },
+      { id: "ob6", provinceId: "TH", disease: "Sốt xuất huyết", cases: 65, level: 2, trend: "Đã qua 15 ngày không ca mới", sourceName: "CDC Thanh Hóa", articleTitle: "Đánh giá tình hình dịch sốt xuất huyết trên địa bàn tỉnh Thanh Hóa", articleUrl: "https://syt.thanhhoa.gov.vn", updatedAt: "15 ngày trước", timestamp: NOW_TS - 15 * DAY_MS },
+      { id: "ob7", provinceId: "HT", disease: "Sốt xuất huyết", cases: 18, level: 1, trend: "Nguồn CDC địa phương", sourceName: "CDC Hà Tĩnh", articleTitle: "Hà Tĩnh ghi nhận các ca mắc sốt xuất huyết rải rác trong tuần", articleUrl: "https://soyte.hatinh.gov.vn", updatedAt: "Hôm nay", timestamp: NOW_TS - 2 * DAY_MS },
+      { id: "ob8", provinceId: "TQ", disease: "Cúm mùa / Cúm A", cases: 55, level: 2, trend: "Qua 8 ngày không ca mới", sourceName: "CDC Tuyên Quang", articleTitle: "CDC Tuyên Quang theo dõi các ca cúm mùa giao mùa tại trường học", articleUrl: "https://soytetuyenquang.gov.vn", updatedAt: "8 ngày trước", timestamp: NOW_TS - 8 * DAY_MS }
+    ];
+
+    let outbreaksData = [];
+    let map = null;
+    let markersLayer = null;
+    let routeLayer = null;
+    let userLocationMarker = null;
+    let isAdminUnlocked = false;
+    let adminTapCount = 0;
+    let adminTapTimer = null;
+
+    // =========================================================================
+    // CHUẨN HÓA LINK BÀI BÁO (MỞ THẲNG BÀI VIẾT THAY VÌ DỪNG Ở TRANG CHỦ)
+    // =========================================================================
+    function buildSmartArticleUrl(item, provinceName) {
+      const rawUrl = (item && item.articleUrl ? String(item.articleUrl) : "").trim();
+      const title = (item && item.articleTitle ? String(item.articleTitle) : "").trim();
+      const disease = (item && item.disease ? String(item.disease) : "").trim();
+      const prov = (provinceName || "").trim();
+
+      let isDirectArticle = false;
+      if (rawUrl && !rawUrl.includes("news.google.com")) {
+        try {
+          const parsed = new URL(rawUrl);
+          const path = (parsed.pathname || "").replace(/\/+$/, "");
+          const looksLikeCategoryOrHome =
+            path === "" ||
+            path === "/" ||
+            /^\/(suc-khoe|y-te|tin-tuc|gioi-thieu|trang-chu|suc-khoe\.htm)(\/)?$/i.test(path);
+
+          if (!looksLikeCategoryOrHome && path.length > 8) {
+            isDirectArticle = true;
+          }
+        } catch (e) {
+          isDirectArticle = false;
+        }
+      }
+
+      if (isDirectArticle) return rawUrl;
+
+      const queryParts = [title, prov, disease].filter(Boolean);
+      const searchQuery = queryParts.length > 0 ? queryParts.join(" ") : `${prov} ${disease} tin tức y tế`;
+      return `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+    }
+
+    // =========================================================================
+    // QUY TẮC HẠ MÀU & ẨN THEO CHU KỲ KHỎI BỆNH / Ủ BỆNH TỪNG NHÓM BỆNH
+    // =========================================================================
+    function getDiseaseCycleConfig(diseaseName) {
+      const name = (diseaseName || "").toLowerCase();
+
+      // Nhóm 1: Bệnh hô hấp cấp tính ngắn ngày (Cúm) -> 7 ngày hạ màu, 14 ngày ẩn
+      if (name.includes("cúm")) {
+        return { downgradeDays: 7, hideDays: 14, groupLabel: "Chu kỳ 7/14 ngày" };
+      }
+
+      // Nhóm 2: Sốt xuất huyết, Tay chân miệng, Sốt rét -> 14 ngày hạ màu, 28 ngày ẩn
+      if (name.includes("sốt xuất huyết") || name.includes("tay chân miệng") || name.includes("sốt rét")) {
+        return { downgradeDays: 14, hideDays: 28, groupLabel: "Chu kỳ 14/28 ngày" };
+      }
+
+      // Nhóm 3: Sởi, Thủy đậu, Ho gà, Bạch hầu, Viêm não, Dại -> 21 ngày hạ màu, 30 ngày ẩn
+      return { downgradeDays: 21, hideDays: 30, groupLabel: "Chu kỳ 21/30 ngày" };
+    }
+
+    function evaluateOutbreakDecay(record) {
+      const ts = Number(record.timestamp) || Date.now();
+      const daysElapsed = Math.max(0, Math.floor((Date.now() - ts) / DAY_MS));
+      const cycle = getDiseaseCycleConfig(record.disease);
+
+      if (daysElapsed >= cycle.hideDays || daysElapsed > 30) {
+        return {
+          ...record,
+          effectiveLevel: 0,
+          daysElapsed,
+          statusNote: `Qua ${daysElapsed} ngày không ca mới (${cycle.groupLabel} - Đã kết thúc)`
+        };
+      }
+
+      if (daysElapsed >= cycle.downgradeDays) {
+        const lowered = Math.max(1, Number(record.level || 1) - 1);
+        return {
+          ...record,
+          effectiveLevel: lowered,
+          daysElapsed,
+          statusNote: `Qua ${daysElapsed} ngày không ca mới (${cycle.groupLabel} - Đã hạ màu)`
+        };
+      }
+
+      return {
+        ...record,
+        effectiveLevel: Number(record.level || 1),
+        daysElapsed,
+        statusNote: ""
+      };
+    }
+
+    function getActiveRecordsByProvince(provinceId) {
+      return outbreaksData
+        .filter(item => item.provinceId === provinceId)
+        .map(evaluateOutbreakDecay)
+        .filter(item => item.effectiveLevel > 0);
+    }
+
+    function getLevelConfig(level) {
+      if (level === 3) return { label: "Cấp 3 • Nguy cơ cao", color: "#dc2626", bgClass: "bg-red-50 border-red-200 text-red-800", badgeClass: "bg-red-600 text-white" };
+      if (level === 2) return { label: "Cấp 2 • Cảnh báo", color: "#d97706", bgClass: "bg-amber-50 border-amber-200 text-amber-800", badgeClass: "bg-amber-500 text-white" };
+      if (level === 1) return { label: "Cấp 1 • Theo dõi", color: "#059669", bgClass: "bg-emerald-50 border-emerald-200 text-emerald-800", badgeClass: "bg-emerald-600 text-white" };
+      return { label: "An toàn / Kiểm soát", color: "#64748b", bgClass: "bg-slate-50 border-slate-200 text-slate-700", badgeClass: "bg-slate-200 text-slate-700" };
+    }
+
+    // =========================================================================
+    // PHÂN QUYỀN CHẾ ĐỘ XEM & MỞ KHÓA QUẢN TRỊ VIÊN
+    // =========================================================================
+    function handleSecretAdminTap() {
+      if (isAdminUnlocked) {
+        showToast("Bạn đang ở chế độ Quản trị viên.");
+        return;
+      }
+      adminTapCount++;
+      clearTimeout(adminTapTimer);
+      adminTapTimer = setTimeout(() => { adminTapCount = 0; }, 2000);
+
+      if (adminTapCount >= 5) {
+        adminTapCount = 0;
+        document.getElementById("adminLoginModal").classList.remove("hidden");
+        document.getElementById("adminPasswordInput").focus();
+      }
+    }
+
+    function closeAdminLoginModal() {
+      document.getElementById("adminLoginModal").classList.add("hidden");
+      document.getElementById("adminPasswordInput").value = "";
+    }
+
+    function submitAdminPassword() {
+      const val = document.getElementById("adminPasswordInput").value;
+      if (val === ADMIN_SECRET_PASSCODE) {
+        isAdminUnlocked = true;
+        sessionStorage.setItem(STORAGE_KEY_ADMIN_AUTH, "1");
+        closeAdminLoginModal();
+        applyRolePermissions();
+        showToast("Đã mở khóa chế độ Quản trị viên!");
+      } else {
+        showToast("Sai mật khẩu quản trị!");
+      }
+    }
+
+    function logoutAdminMode() {
+      isAdminUnlocked = false;
+      sessionStorage.removeItem(STORAGE_KEY_ADMIN_AUTH);
+      applyRolePermissions();
+      showToast("Đã khóa về chế độ Chỉ xem.");
+    }
+
+    function applyRolePermissions() {
+      const roleBadge = document.getElementById("roleBadge");
+      const addBtn = document.getElementById("adminAddCaseBtn");
+      const syncBtn = document.getElementById("adminSyncConfigBtn");
+      const logoutBtn = document.getElementById("adminLogoutBtn");
+      const sheetConfigSec = document.getElementById("adminSheetConfigSection");
+      const drawerAdminBox = document.getElementById("drawerAdminActions");
+
+      if (isAdminUnlocked) {
+        roleBadge.textContent = "Quản trị viên";
+        roleBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shrink-0";
+        addBtn.classList.remove("hidden"); addBtn.classList.add("flex");
+        syncBtn.classList.remove("hidden"); syncBtn.classList.add("flex");
+        logoutBtn.classList.remove("hidden"); logoutBtn.classList.add("flex");
+        sheetConfigSec.classList.remove("hidden");
+        drawerAdminBox.classList.remove("hidden");
+      } else {
+        roleBadge.textContent = "Chế độ Xem";
+        roleBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 shrink-0";
+        addBtn.classList.add("hidden"); addBtn.classList.remove("flex");
+        syncBtn.classList.add("hidden"); syncBtn.classList.remove("flex");
+        logoutBtn.classList.add("hidden"); logoutBtn.classList.remove("flex");
+        sheetConfigSec.classList.add("hidden");
+        drawerAdminBox.classList.add("hidden");
+      }
+    }
+
+    // =========================================================================
+    // ĐỒNG BỘ GOOGLE SHEETS CSV & LỊCH TỰ ĐỘNG 05:00 & 17:00
+    // =========================================================================
+    function getActiveGoogleSheetUrl() {
+      if (PUBLIC_GOOGLE_SHEET_CSV_URL && PUBLIC_GOOGLE_SHEET_CSV_URL.trim() !== "") {
+        return PUBLIC_GOOGLE_SHEET_CSV_URL.trim();
+      }
+      return (localStorage.getItem(STORAGE_KEY_SHEET_URL) || "").trim();
+    }
+
+    function parseCsvRows(csvText) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < csvText.length; i++) {
+        const ch = csvText[i];
+        const next = csvText[i + 1];
+        if (ch === '"' && inQuotes && next === '"') {
+          cell += '"';
+          i++;
+        } else if (ch === '"') {
+          inQuotes = !inQuotes;
+        } else if (ch === ',' && !inQuotes) {
+          row.push(cell.trim());
+          cell = "";
+        } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+          if (ch === '\r' && next === '\n') i++;
+          row.push(cell.trim());
+          if (row.some(c => c !== "")) rows.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += ch;
+        }
+      }
+      if (cell.length > 0 || row.length > 0) {
+        row.push(cell.trim());
+        if (row.some(c => c !== "")) rows.push(row);
+      }
+      return rows;
+    }
+
+    async function syncFromGoogleSheet(silent = false) {
+      const url = getActiveGoogleSheetUrl();
+      const statusEl = document.getElementById("autoSyncStatusText");
+      if (!url) {
+        statusEl.textContent = "Đang dùng dữ liệu mẫu trong tháng";
+        return;
+      }
+
+      try {
+        statusEl.textContent = "Đang đồng bộ từ Google Sheets...";
+        const fetchUrl = url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now();
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const text = await res.text();
+        const rows = parseCsvRows(text);
+
+        if (rows.length <= 1) throw new Error("Bảng tính chưa có dữ liệu");
+
+        const parsedList = [];
+        const THIRTY_DAYS_MS = 30 * DAY_MS;
+
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          const provId = (r[0] || "").toUpperCase().trim();
+          if (!PROVINCES_34.some(p => p.id === provId)) continue;
+
+          const ts = Number(r[9]) || Date.now();
+          if (Date.now() - ts > THIRTY_DAYS_MS) continue; // Bỏ qua bản ghi quá 30 ngày
+
+          const casesNum = parseInt(r[2], 10) || 25;
+          const lvl = parseInt(r[3], 10) || (casesNum >= 500 ? 3 : (casesNum >= 50 ? 2 : 1));
+
+          parsedList.push({
+            id: "gs_" + i,
+            provinceId: provId,
+            disease: r[1] || "Sốt xuất huyết",
+            cases: casesNum,
+            level: lvl,
+            trend: r[4] || "Cập nhật trong 30 ngày",
+            sourceName: r[5] || "Nguồn CDC & Báo chí",
+            articleTitle: r[6] || "Báo cáo tình hình dịch tễ địa phương",
+            articleUrl: r[7] || "",
+            updatedAt: r[8] || "Tự động",
+            timestamp: ts
+          });
+        }
+
+        if (parsedList.length > 0) {
+          outbreaksData = parsedList;
+          saveOutbreaksToStorage();
+          renderAll();
+          const nowStr = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+          statusEl.textContent = `Đã đồng bộ Google Sheets lúc ${nowStr} (Dữ liệu 30 ngày)`;
+          if (!silent) showToast(`Đã cập nhật ${parsedList.length} bản ghi trong 30 ngày gần nhất!`);
+        }
+      } catch (err) {
+        statusEl.textContent = "Lỗi đồng bộ CSV • Đang hiển thị bản lưu gần nhất";
+        if (!silent) showToast("Không thể tải dữ liệu từ link CSV. Hãy kiểm tra lại link công bố.");
+      }
+    }
+
+    function manualRefreshSheet() {
+      const url = getActiveGoogleSheetUrl();
+      if (url) syncFromGoogleSheet(false);
+      else showToast("Chưa gắn link Google Sheets CSV.");
+    }
+
+    function saveAndSyncGoogleSheet() {
+      const input = document.getElementById("googleSheetCsvInput").value.trim();
+      if (!input) {
+        showToast("Vui lòng dán đường link CSV từ Google Sheets!");
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY_SHEET_URL, input);
+      syncFromGoogleSheet(false);
+    }
+
+    function disconnectGoogleSheet() {
+      localStorage.removeItem(STORAGE_KEY_SHEET_URL);
+      document.getElementById("googleSheetCsvInput").value = "";
+      document.getElementById("autoSyncStatusText").textContent = "Đã ngắt kết nối Google Sheets";
+      showToast("Đã ngắt kết nối link CSV.");
+    }
+
+    function scheduleDailyAutoSync_5h_17h() {
+      setInterval(() => {
+        const now = new Date();
+        const h = now.getHours();
+        const m = now.getMinutes();
+        if ((h === 5 || h === 17) && m === 1) {
+          syncFromGoogleSheet(true);
+        }
+      }, 60000);
+    }
+
+    // =========================================================================
+    // LƯU TRỮ DỮ LIỆU & KHỞI TẠO BẢN ĐỒ LEAFLET (NỀN ESRI KHÔNG LỖI 403)
+    // =========================================================================
+    function loadOutbreaksFromStorage() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY_OUTBREAKS);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            outbreaksData = parsed;
+            return;
+          }
+        }
+      } catch (e) {}
+      outbreaksData = JSON.parse(JSON.stringify(DEFAULT_OUTBREAKS));
+    }
+
+    function saveOutbreaksToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_OUTBREAKS, JSON.stringify(outbreaksData));
+      } catch (e) {}
+    }
+
+    function resetToDefaultData() {
+      outbreaksData = JSON.parse(JSON.stringify(DEFAULT_OUTBREAKS));
+      saveOutbreaksToStorage();
+      renderAll();
+      showToast("Đã khôi phục dữ liệu mẫu ban đầu.");
+    }
+
+    function initLeafletMap() {
+      map = L.map("vietnamLeafletMap", { zoomControl: false }).setView([16.2, 106.5], 6);
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "Tiles &copy; Esri",
+        maxZoom: 19
+      }).addTo(map);
+
+      markersLayer = L.layerGroup().addTo(map);
+    }
+
+    function resetMapView() {
+      if (map) map.flyTo([16.2, 106.5], 6, { duration: 0.8 });
+    }
+
+    // =========================================================================
+    // VẼ VÒNG TRÒN DỊCH TỄ & DANH SÁCH 34 TỈNH/THÀNH
+    // =========================================================================
+    function renderAll() {
+      const searchKw = (document.getElementById("searchProvinceInput").value || "").toLowerCase().trim();
+      const diseaseFilter = document.getElementById("filterDiseaseSelect").value;
+      const levelFilter = document.getElementById("filterLevelSelect").value;
+
+      let totalCasesAll = 0;
+      let countL3 = 0, countL2 = 0, countL1 = 0;
+
+      markersLayer.clearLayers();
+      const listContainer = document.getElementById("provinceListContainer");
+      listContainer.innerHTML = "";
+
+      const enrichedProvinces = PROVINCES_34.map(prov => {
+        let activeRecs = getActiveRecordsByProvince(prov.id);
+        if (diseaseFilter !== "ALL") {
+          activeRecs = activeRecs.filter(r => r.disease === diseaseFilter);
+        }
+
+        const totalCases = activeRecs.reduce((sum, r) => sum + (Number(r.cases) || 0), 0);
+        const maxLevel = activeRecs.length > 0 ? Math.max(...activeRecs.map(r => r.effectiveLevel)) : 0;
+
+        totalCasesAll += totalCases;
+        if (maxLevel === 3) countL3++;
+        else if (maxLevel === 2) countL2++;
+        else if (maxLevel === 1) countL1++;
+
+        return { ...prov, activeRecs, totalCases, maxLevel };
+      });
+
+      document.getElementById("statTotalCases").textContent = totalCasesAll.toLocaleString("vi-VN");
+      document.getElementById("statLevel3Count").textContent = countL3;
+      document.getElementById("statLevel2Count").textContent = countL2;
+      document.getElementById("statLevel1Count").textContent = countL1;
+
+      enrichedProvinces.sort((a, b) => (b.maxLevel - a.maxLevel) || (b.totalCases - a.totalCases));
+
+      enrichedProvinces.forEach(item => {
+        const matchesSearch = !searchKw || item.name.toLowerCase().includes(searchKw) || item.id.toLowerCase().includes(searchKw);
+        const matchesLevel = levelFilter === "ALL" || String(item.maxLevel) === levelFilter;
+        if (!matchesSearch || !matchesLevel) return;
+
+        const cfg = getLevelConfig(item.maxLevel);
+
+        if (item.maxLevel > 0) {
+          const size = item.maxLevel === 3 ? 38 : (item.maxLevel === 2 ? 30 : 24);
+          const pulseHtml = item.maxLevel === 3
+            ? `<div class="pulse-marker-ring" style="background:${cfg.color};"></div>`
+            : "";
+
+          const iconHtml = `
+            <div style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;">
+              ${pulseHtml}
+              <div style="width:${size}px;height:${size}px;border-radius:9999px;background:${cfg.color};border:2.5px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.28);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;">
+                ${item.totalCases >= 1000 ? (item.totalCases / 1000).toFixed(1) + "k" : item.totalCases}
+              </div>
+            </div>`;
+
+          const customIcon = L.divIcon({
+            html: iconHtml,
+            className: "",
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2]
+          });
+
+          const marker = L.marker([item.lat, item.lng], { icon: customIcon });
+          marker.on("click", () => openProvinceDetail(item.id));
+          marker.bindTooltip(`<strong>${item.name}</strong><br/>${item.totalCases.toLocaleString("vi-VN")} ca (${cfg.label})`, { direction: "top" });
+          markersLayer.addLayer(marker);
+        } else {
+          const safeMarker = L.circleMarker([item.lat, item.lng], {
+            radius: 4.5,
+            fillColor: "#64748b",
+            color: "#ffffff",
+            weight: 1.5,
+            fillOpacity: 0.75
+          });
+          safeMarker.on("click", () => openProvinceDetail(item.id));
+          safeMarker.bindTooltip(`${item.name} • An toàn`, { direction: "top" });
+          markersLayer.addLayer(safeMarker);
+        }
+
+        const diseaseTags = item.activeRecs.length > 0
+          ? item.activeRecs.map(r => `${r.disease} (${r.cases})`).join(" • ")
+          : "Không ghi nhận ổ dịch trong 30 ngày qua";
+
+        const card = document.createElement("div");
+        card.onclick = () => openProvinceDetail(item.id);
+        card.className = "p-3 rounded-xl bg-white hover:bg-blue-50/50 border border-slate-200/90 transition cursor-pointer flex items-center justify-between gap-2.5 shadow-2xs";
+        card.innerHTML = `
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-xs sm:text-sm text-slate-900 truncate">${item.name}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${cfg.badgeClass} shrink-0">
+                ${item.maxLevel > 0 ? "Cấp " + item.maxLevel : "An toàn"}
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-500 truncate mt-1">${diseaseTags}</p>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-extrabold text-slate-800">${item.totalCases > 0 ? item.totalCases.toLocaleString("vi-VN") + " ca" : "—"}</div>
+            <div class="text-[10px] text-blue-600 font-bold mt-0.5">Chi tiết →</div>
+          </div>
+        `;
+        listContainer.appendChild(card);
+      });
+    }
+
+    function clearSearch() {
+      document.getElementById("searchProvinceInput").value = "";
+      renderAll();
+    }
+
+    // =========================================================================
+    // NGĂN KÉO CHI TIẾT TỈNH / THÀNH PHỐ
+    // =========================================================================
+    function openProvinceDetail(provinceId) {
+      const province = PROVINCES_34.find(p => p.id === provinceId);
+      if (!province) return;
+
+      if (map) map.flyTo([province.lat, province.lng], 9, { duration: 0.8 });
+
+      const records = getActiveRecordsByProvince(provinceId);
+      const maxLevel = records.length > 0 ? Math.max(...records.map(r => r.effectiveLevel)) : 0;
+      const totalCases = records.reduce((s, r) => s + (Number(r.cases) || 0), 0);
+      const cfg = getLevelConfig(maxLevel);
+
+      document.getElementById("drawerProvinceCode").textContent = `${province.id} • ${province.region}`;
+      document.getElementById("drawerProvinceName").textContent = province.name;
+
+      const alertBanner = document.getElementById("drawerAlertBanner");
+      alertBanner.className = `p-3.5 rounded-2xl border ${cfg.bgClass}`;
+      alertBanner.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold uppercase">${cfg.label}</span>
+          <span class="text-sm font-black">${totalCases.toLocaleString("vi-VN")} ca</span>
+        </div>
+        <p class="text-xs mt-1 opacity-90">
+          ${maxLevel > 0
+            ? "Số liệu tổng hợp trong 30 ngày gần nhất. Hệ thống tự động hạ màu khi qua thời gian khỏi bệnh / chu kỳ lây truyền."
+            : "Địa phương hiện ở trạng thái an toàn, chưa ghi nhận ổ dịch mới trong 30 ngày gần nhất."}
+        </p>
+      `;
+
+      const diseasesListEl = document.getElementById("drawerDiseasesList");
+      if (records.length > 0) {
+        diseasesListEl.innerHTML = records.map(r => `
+          <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+            ${r.disease}: ${r.cases.toLocaleString("vi-VN")} ca
+            ${r.statusNote ? `<span class="text-[10px] text-amber-700 font-semibold">(${r.statusNote})</span>` : ""}
+          </span>
+        `).join("");
+      } else {
+        diseasesListEl.innerHTML = `<span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800">Không ghi nhận ổ dịch truyền nhiễm</span>`;
+      }
+
+      document.getElementById("drawerRouteToBtn").onclick = () => {
+        closeProvinceDetail();
+        toggleDirectionsBox(true);
+        document.getElementById("routeDestSelect").value = province.id;
+        calculateAndDrawRoute();
+      };
+
+      const drawerAdminBox = document.getElementById("drawerAdminActions");
+      if (isAdminUnlocked && records.length > 0) {
+        drawerAdminBox.classList.remove("hidden");
+        document.getElementById("drawerConfirmActiveBtn").onclick = () => {
+          outbreaksData.forEach(item => {
+            if (item.provinceId === provinceId) {
+              item.timestamp = Date.now();
+              item.updatedAt = "Vừa xác nhận";
+            }
+          });
+          saveOutbreaksToStorage();
+          renderAll();
+          openProvinceDetail(provinceId);
+          showToast(`Đã làm mới chu kỳ 0 ngày cho ${province.name}.`);
+        };
+        document.getElementById("drawerMarkClearedBtn").onclick = () => {
+          outbreaksData = outbreaksData.filter(item => item.provinceId !== provinceId);
+          saveOutbreaksToStorage();
+          renderAll();
+          closeProvinceDetail();
+          showToast(`Đã ẩn ổ dịch tại ${province.name}.`);
+        };
+      } else {
+        drawerAdminBox.classList.add("hidden");
+      }
+
+      const articlesContainer = document.getElementById("drawerArticlesContainer");
+      if (records.length > 0) {
+        articlesContainer.innerHTML = records.map(r => `
+          <a href="${buildSmartArticleUrl(r, province.name)}" target="_blank" rel="noopener noreferrer"
+            class="group block p-3.5 rounded-xl bg-blue-50/80 hover:bg-blue-100/90 border border-blue-200 transition">
+            <div class="flex items-start justify-between gap-2.5">
+              <div>
+                <span class="inline-block text-[11px] font-extrabold text-blue-700 uppercase mb-1">
+                  ${r.sourceName} • ${r.disease}
+                </span>
+                <h4 class="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-700 leading-snug">
+                  ${r.articleTitle}
+                </h4>
+              </div>
+              <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition">
+                <i class="ph-bold ph-arrow-up-right text-base"></i>
+              </div>
+            </div>
+            <div class="mt-2 text-xs font-bold text-blue-600 flex items-center gap-1">
+              <span>Mở đường link bài báo gốc ↗</span>
+            </div>
+          </a>
+        `).join("");
+      } else {
+        articlesContainer.innerHTML = `
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+            Địa phương hiện đang ở trạng thái an toàn. Chưa có cảnh báo dịch bệnh mới.
+          </div>
+        `;
+      }
+
+      const preventionContainer = document.getElementById("drawerPreventionContainer");
+      const uniqueDiseases = records.length > 0 ? [...new Set(records.map(r => r.disease))] : ["Sốt xuất huyết", "Cúm mùa / Cúm A"];
+      preventionContainer.innerHTML = uniqueDiseases.map(dis => {
+        const tips = PREVENTION_GUIDES[dis] || PREVENTION_GUIDES["Sốt xuất huyết"];
+        return `
+          <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-1.5">
+            <div class="font-extrabold text-emerald-900">Phòng ngừa ${dis}:</div>
+            <ul class="list-disc pl-4 space-y-1 text-slate-700">
+              ${tips.map(t => `<li>${t}</li>`).join("")}
+            </ul>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("detailDrawerBackdrop").classList.remove("hidden");
+      document.getElementById("detailDrawer").classList.remove("translate-x-full");
+    }
+
+    function closeProvinceDetail() {
+      document.getElementById("detailDrawerBackdrop").classList.add("hidden");
+      document.getElementById("detailDrawer").classList.add("translate-x-full");
+    }
+
+    // =========================================================================
+    // ĐỊNH VỊ GPS & TÌM ĐƯỜNG CẢNH BÁO VÙNG DỊCH
+    // =========================================================================
+    function locateUserGPS(isManualTrigger = false) {
+      if (!navigator.geolocation) {
+        if (isManualTrigger) showToast("Trình duyệt không hỗ trợ định vị GPS.");
+        return;
+      }
+      const btnIcon = document.getElementById("gpsBtnIcon");
+      if (btnIcon) btnIcon.classList.add("animate-spin");
+
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          if (btnIcon) btnIcon.classList.remove("animate-spin");
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = Math.round(pos.coords.accuracy || 50);
+
+          if (userLocationMarker) map.removeLayer(userLocationMarker);
+          userLocationMarker = L.circleMarker([lat, lng], {
+            radius: 8, fillColor: "#2563eb", color: "#ffffff", weight: 3, fillOpacity: 1
+          }).addTo(map).bindPopup("Vị trí hiện tại của bạn");
+
+          let nearestProv = PROVINCES_34[0];
+          let minDist = Infinity;
+          PROVINCES_34.forEach(p => {
+            const d = Math.hypot(p.lat - lat, p.lng - lng);
+            if (d < minDist) { minDist = d; nearestProv = p; }
+          });
+
+          const records = getActiveRecordsByProvince(nearestProv.id);
+          const cardEl = document.getElementById("userLocationCard");
+          document.getElementById("userLocationProvinceTitle").textContent = `Bạn đang ở khu vực: ${nearestProv.name}`;
+          document.getElementById("userLocationStatusDesc").textContent = records.length > 0
+            ? `Đang lưu hành: ${records.map(r => `${r.disease} (${r.cases} ca)`).join(", ")}.`
+            : "Khu vực hiện chưa ghi nhận ổ dịch lớn.";
+          document.getElementById("userLocationAccuracy").textContent = `Độ chính xác GPS: ~${accuracy}m`;
+          document.getElementById("userLocationDetailBtn").onclick = () => openProvinceDetail(nearestProv.id);
+          cardEl.classList.remove("hidden");
+
+          const originInput = document.getElementById("routeOriginInput");
+          if (originInput && !originInput.value.trim()) {
+            originInput.value = nearestProv.name;
+          }
+
+          map.flyTo([lat, lng], 9, { duration: 0.9 });
+          if (isManualTrigger) showToast(`Đã định vị vị trí của bạn tại ${nearestProv.name}`);
+        },
+        () => {
+          if (btnIcon) btnIcon.classList.remove("animate-spin");
+          if (isManualTrigger) showToast("Không thể truy cập GPS. Vui lòng cấp quyền vị trí.");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    }
+
+    function dismissUserLocationCard() {
+      document.getElementById("userLocationCard").classList.add("hidden");
+    }
+
+    function toggleDirectionsBox(forceState) {
+      const panel = document.getElementById("directionsPanel");
+      const shouldShow = typeof forceState === "boolean" ? forceState : panel.classList.contains("hidden");
+      if (shouldShow) {
+        dismissUserLocationCard();
+        panel.classList.remove("hidden");
+      } else {
+        panel.classList.add("hidden");
+      }
+    }
+
+    function calculateAndDrawRoute() {
+      const originText = (document.getElementById("routeOriginInput").value || "Hà Nội").toLowerCase().trim();
+      const destId = document.getElementById("routeDestSelect").value;
+      const destProv = PROVINCES_34.find(p => p.id === destId) || PROVINCES_34[0];
+      const originProv = PROVINCES_34.find(p => originText.includes(p.name.toLowerCase().replace("tp. ", ""))) || PROVINCES_34[0];
+
+      clearDrawnRoute();
+      routeLayer = L.polyline([[originProv.lat, originProv.lng], [destProv.lat, destProv.lng]], {
+        color: "#059669", weight: 4, dashArray: "8, 8"
+      }).addTo(map);
+      map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+
+      const destRecs = getActiveRecordsByProvince(destProv.id);
+      const resBox = document.getElementById("routeWarningResult");
+      resBox.classList.remove("hidden");
+      if (destRecs.length > 0) {
+        resBox.className = "mt-2.5 p-2.5 rounded-xl text-xs leading-relaxed bg-amber-50 border border-amber-200 text-amber-900";
+        resBox.innerHTML = `<strong>Cảnh báo điểm đến (${destProv.name}):</strong> Đang ghi nhận ${destRecs.map(r => `${r.disease} (${r.cases} ca)`).join(", ")}. Hãy chuẩn bị biện pháp phòng dịch khi di chuyển.`;
+      } else {
+        resBox.className = "mt-2.5 p-2.5 rounded-xl text-xs leading-relaxed bg-emerald-50 border border-emerald-200 text-emerald-900";
+        resBox.innerHTML = `<strong>Lộ trình an toàn:</strong> Điểm đến <strong>${destProv.name}</strong> hiện chưa ghi nhận ổ dịch phức tạp.`;
+      }
+    }
+
+    function clearDrawnRoute() {
+      if (routeLayer && map) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
+      }
+      document.getElementById("routeWarningResult").classList.add("hidden");
+    }
+
+    // =========================================================================
+    // MODAL NHẬP DỮ LIỆU & QUY TẮC
+    // =========================================================================
+    function openAddDataModal() {
+      if (!isAdminUnlocked) return;
+      document.getElementById("addDataModal").classList.remove("hidden");
+    }
+    function closeAddDataModal() {
+      document.getElementById("addDataModal").classList.add("hidden");
+    }
+    function autoSuggestLevel() {
+      const cases = parseInt(document.getElementById("inputCases").value, 10) || 0;
+      document.getElementById("inputLevel").value = cases >= 500 ? "3" : (cases >= 50 ? "2" : "1");
+    }
+    function submitNewOutbreak(e) {
+      e.preventDefault();
+      if (!isAdminUnlocked) return;
+
+      const provId = document.getElementById("inputProvinceId").value;
+      const disease = document.getElementById("inputDisease").value;
+      const cases = parseInt(document.getElementById("inputCases").value, 10) || 1;
+      const level = parseInt(document.getElementById("inputLevel").value, 10) || 1;
+      const sourceName = document.getElementById("inputSourceName").value.trim();
+      const articleTitle = document.getElementById("inputArticleTitle").value.trim();
+      const articleUrl = document.getElementById("inputArticleUrl").value.trim();
+
+      outbreaksData.unshift({
+        id: "manual_" + Date.now(),
+        provinceId: provId,
+        disease,
+        cases,
+        level,
+        trend: "Cập nhật thủ công",
+        sourceName,
+        articleTitle,
+        articleUrl,
+        updatedAt: "Vừa cập nhật",
+        timestamp: Date.now()
+      });
+
+      saveOutbreaksToStorage();
+      renderAll();
+      closeAddDataModal();
+      openProvinceDetail(provId);
+      showToast("Đã thêm dữ liệu dịch bệnh lên bản đồ!");
+    }
+
+    function openTable1Modal() {
+      document.getElementById("googleSheetCsvInput").value = getActiveGoogleSheetUrl();
+      document.getElementById("table1Modal").classList.remove("hidden");
+    }
+    function closeTable1Modal() {
+      document.getElementById("table1Modal").classList.add("hidden");
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById("toastNotification");
+      el.textContent = msg;
+      el.classList.remove("hidden");
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.add("hidden"), 3200);
+    }
+
+    // =========================================================================
+    // KHỞI CHẠY ỨNG DỤNG
+    // =========================================================================
+    window.onload = function () {
+      const provSelect = document.getElementById("inputProvinceId");
+      const destSelect = document.getElementById("routeDestSelect");
+      PROVINCES_34.forEach(p => {
+        provSelect.add(new Option(`${p.name} (${p.id})`, p.id));
+        destSelect.add(new Option(`Đến: ${p.name}`, p.id));
+      });
+
+      const urlParams = new URLSearchParams(window.location.search);
+      if (sessionStorage.getItem(STORAGE_KEY_ADMIN_AUTH) === "1") {
+        isAdminUnlocked = true;
+      } else if (urlParams.get("admin") === "1") {
+        document.getElementById("adminLoginModal").classList.remove("hidden");
+      }
+      applyRolePermissions();
+
+      loadOutbreaksFromStorage();
+      initLeafletMap();
+      renderAll();
+      scheduleDailyAutoSync_5h_17h();
+
+      if (getActiveGoogleSheetUrl()) {
+        syncFromGoogleSheet(true);
+      }
+    };
+  </script>
+</body>
+</html>
